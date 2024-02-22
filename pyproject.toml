@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kubespawner_keycloak"
+version = "0.0.1"
+authors = [
+  { name="Shaun Turner", email="shaun.turner1@nhs.net" },
+]
+description = "Keycloak integration into kubespawner" 
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  "jupyterhub-kubespawner",
+  "requests",
+  'importlib-metadata; python_version<"3.10"',
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/lsc-sde/py-kubespawner-keycloak"
+Issues = "https://github.com/lsc-sde/py-kubespawner-keycloak/issues"
+
+[tool.coverage.run]
+source = ["src"]

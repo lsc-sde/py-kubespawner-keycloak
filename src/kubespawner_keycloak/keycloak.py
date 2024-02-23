@@ -1,9 +1,9 @@
 from kubespawner.spawner import KubeSpawner
 from secrets import token_hex
-from objects import (
+from .objects import (
     KeycloakGroup
 )
-from exceptions import (
+from .exceptions import (
     InvalidKeycloakGroupPath, 
     InvalidKeycloakResponseCodeException,
     KeycloakGroupNotFoundException,

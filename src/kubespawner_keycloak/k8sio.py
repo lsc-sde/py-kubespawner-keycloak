@@ -1,6 +1,6 @@
 from kubespawner.spawner import KubeSpawner
 from kubernetes_asyncio import client
-from objects import WorkspaceVolumeStatus
+from .objects import WorkspaceVolumeStatus
 from kubernetes_asyncio.client.models import (
     V1ObjectMeta,
     V1Pod,

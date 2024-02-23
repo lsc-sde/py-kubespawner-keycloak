@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from exceptions import KeycloakGroupConversionException
+from .exceptions import KeycloakGroupConversionException
 
 class WorkspaceVolumeStatus:
     def __init__(self, name : str, namespace: str, exists : bool):

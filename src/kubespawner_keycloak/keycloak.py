@@ -1,3 +1,4 @@
+import base64
 from kubespawner.spawner import KubeSpawner
 from secrets import token_hex
 from .objects import (
@@ -12,11 +13,29 @@ from .exceptions import (
 import requests
 
 class KeycloakRequester:
-    def __init__(self, base_url, access_token, cacerts):
+    def __init__(self, base_url : str, token_url : str, client_id : str, client_secret : str, cacerts : str):
         self.base_url = base_url
-        self.access_token = access_token
+        self.token_url = token_url
         self.cacerts = cacerts
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.access_token = ""
 
+    def convertToBase64(self, originalValue):
+        originalValue_bytes = originalValue.encode("ascii") 
+    
+        base64_bytes = base64.b64encode(originalValue_bytes) 
+        return base64_bytes.decode("ascii")
+    
+    def get_access_token(self):
+        print(f"Requesting {self.token_url} for token")
+        credentials_encoded = self.convertToBase64(f"{self.client_id}:{self.client_secret}")
+        headers = {"Authorization": f"Basic {credentials_encoded}" } 
+        response = requests.post(self.token_url, headers=headers, data = {"grant_type": "client_credentials"}, verify=self.cacerts)
+        json = self.process_response(response)   
+        self.access_token = json.get("access_token")
+        self.access_token_expires_in = json.get("expires_in")
+    
     def process_response(self, response):
         if response.status_code == 200:
             return response.json()
@@ -24,18 +43,22 @@ class KeycloakRequester:
             raise InvalidKeycloakResponseCodeException(response.status_code)
 
     def query(self, url):
+        if self.access_token == "":
+            self.get_access_token()
+
         print(f"Requesting {url}")
         headers = {"Authorization": f"Bearer {self.access_token}" } 
         response = requests.get(f"{self.base_url}{url}", headers=headers, verify=self.cacerts)
         return self.process_response(response)   
 
 class KubespawnerKeycloak:
-    def __init__(self, spawner, base_url, access_token, environments_config : dict = {}, cacerts = "/etc/ssl/certs/ca-certificates.crt", groups_claim = "realm_groups", parent_group_name : str = "jupyter-workspaces"):
-        self.requester : KeycloakRequester = KeycloakRequester(base_url, access_token = access_token, cacerts=cacerts)
+    def __init__(self, spawner : KubeSpawner, base_url : str, token_url : str, client_id : str, client_secret : str, environments_config : dict = {}, cacerts = "/etc/ssl/certs/ca-certificates.crt", groups_claim = "realm_groups", parent_group_name : str = "jupyter-workspaces"):
+        self.requester : KeycloakRequester = KeycloakRequester(base_url, token_url, client_id, client_secret, cacerts=cacerts)
+        self.token_url : str = token_url
         self.spawner : KubeSpawner = spawner
         self.user_name : str = spawner.user.name
         self.environments_config = environments_config
-        self.parent_group_name = parent_group_name
+        self.parent_group_name : str = parent_group_name
         userdata = spawner.oauth_user
         self.groups = userdata[groups_claim]
 

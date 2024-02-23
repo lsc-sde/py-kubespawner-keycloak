@@ -30,10 +30,10 @@ Issues = "https://github.com/lsc-sde/py-kubespawner-keycloak/issues"
 source = ["src"]
 
 [tool.hatch.version]
-path = "src/kubespawner-keycloak/_version.py"
+path = "src/kubespawner_keycloak/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/kubespawner-keycloak"]
+packages = ["src/kubespawner_keycloak"]
 
 
 [tool.hatch.build]

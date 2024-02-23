@@ -35,10 +35,12 @@ class NoAssignedValidWorkspaces(Exception):
         super().__init__(self.message)
 
 class KubespawnerKeycloak:
-    def __init__(self, spawner, base_url, access_token, cacerts = "/etc/ssl/certs/ca-certificates.crt", groups_claim = "realm_groups"):
+    def __init__(self, spawner, base_url, access_token, environments_config : dict = {}, cacerts = "/etc/ssl/certs/ca-certificates.crt", groups_claim = "realm_groups", parent_group_name : str = "jupyter-workspaces"):
         self.requester : KeycloakRequester = KeycloakRequester(base_url, access_token = access_token, cacerts=cacerts)
         self.spawner : KubeSpawner = spawner
         self.user_name : str = spawner.user.name
+        self.environments_config = environments_config
+        self.parent_group_name = parent_group_name
         userdata = spawner.oauth_user
         self.groups = userdata[groups_claim]
 
@@ -65,26 +67,26 @@ class KubespawnerKeycloak:
 
         return groups
 
-    def get_permitted_workspaces(self, environments_config : dict, parent_group_name : str = "jupyter-workspaces"):
+    def get_permitted_workspaces(self):
         permitted_workspaces = []
         if "permitted_workspaces" in self.spawner.oauth_user:
             return self.spawner.oauth_user
         
-        parent_group = self.get_group_by_name(parent_group_name)
+        parent_group = self.get_group_by_name(self.parent_group_name)
         
         available_groups = self.get_group_children(parent_group["id"])
 
         # iterating through the group_name
         for group_name in self.groups:
-            if not group_name.startswith(f"/{parent_group_name}/"):
-                e = InvalidKeycloakGroupPath(group_name, parent_group_name)
+            if not group_name.startswith(f"/{self.parent_group_name}/"):
+                e = InvalidKeycloakGroupPath(group_name, self.parent_group_name)
                 self.spawner.log.error(e.message)
                 continue
             
             group : KeycloakGroup = available_groups[group_name.casefold()]
             print(f"Getting environment config for {group.environment_name}")
             workspace_dict = group.to_workspace_dict(
-                kubespawner_override= environments_config.get(group.environment_name, {})
+                kubespawner_override= self.environments_config.get(group.environment_name, {})
             )
             permitted_workspaces.append(workspace_dict)
 

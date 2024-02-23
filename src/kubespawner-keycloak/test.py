@@ -52,7 +52,7 @@ class TestKubespawnerKeycloak:
     async def test_get_groups(self, requests_mock):
         self.mock_get_groups(requests_mock)
         spawner = await self.create_spawner([])
-        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, access_token="")
+        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, environments_config = self.get_environments_config(), access_token="")
         result = keycloak.get_groups()
         assert len(result) == 2
         
@@ -60,7 +60,7 @@ class TestKubespawnerKeycloak:
     async def test_get_group(self, requests_mock):
         self.mock_get_group(requests_mock)
         spawner = await self.create_spawner([])
-        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, access_token="")
+        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, environments_config = self.get_environments_config(), access_token="")
         result = keycloak.get_group("a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab")
         assert "a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab" == result.id
 
@@ -68,7 +68,7 @@ class TestKubespawnerKeycloak:
     async def test_get_child_group(self, requests_mock):
         self.mock_get_child_groups(requests_mock)
         spawner = await self.create_spawner([])
-        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, access_token="")
+        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, environments_config = self.get_environments_config(), access_token="")
         result = keycloak.get_group_children("429c803a-a033-4e1e-8aea-73b92fd43003")
         assert 2 == len(result)
         assert "/jupyter-workspaces/colorectal cancer research group workspace" in result.keys()
@@ -82,13 +82,13 @@ class TestKubespawnerKeycloak:
         self.mock_get_group(requests_mock)
         groups = ["/jupyter-workspaces/Colorectal Cancer Research Group Workspace"]
         spawner = await self.create_spawner(groups)
-        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, access_token="")
+        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, environments_config = self.get_environments_config(), access_token="")
         environments_config = {}
         environments_config["jupyter_advanced"] = {}
         environments_config["jupyter_advanced"]["image"] = "jupyter/datascience-notebook:latest"
         environments_config["jupyter_default"] = {}
         environments_config["jupyter_default"]["image"] = "jupyter/datascience-notebook:latest"
-        permitted_workspaces = keycloak.get_permitted_workspaces(environments_config = environments_config)
+        permitted_workspaces = keycloak.get_permitted_workspaces()
         print(f"permitted_workspaces = {permitted_workspaces}")
         
         assert 1 == len(permitted_workspaces)
@@ -102,17 +102,19 @@ class TestKubespawnerKeycloak:
         self.mock_get_group(requests_mock)
         groups = []
         spawner = await self.create_spawner(groups)
-        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, access_token="")
+        keycloak = KubespawnerKeycloak(spawner = spawner, base_url = self.base_url, environments_config = self.get_environments_config(), access_token="")
+        
+        with pytest.raises(NoAssignedValidWorkspaces):
+            permitted_workspaces = keycloak.get_permitted_workspaces()
+            print(f"permitted_workspaces = {permitted_workspaces}")
+        
+    def get_environments_config(self):
         environments_config = {}
         environments_config["jupyter_advanced"] = {}
         environments_config["jupyter_advanced"]["image"] = "jupyter/datascience-notebook:latest"
         environments_config["jupyter_default"] = {}
         environments_config["jupyter_default"]["image"] = "jupyter/datascience-notebook:latest"
-
-        with pytest.raises(NoAssignedValidWorkspaces):
-            permitted_workspaces = keycloak.get_permitted_workspaces(environments_config = environments_config)
-            print(f"permitted_workspaces = {permitted_workspaces}")
-        
+        return environments_config
 
     async def create_spawner(self, groups):
         spawner = KubeSpawner(user = MockUser(), hub = Hub())

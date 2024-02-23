@@ -1,10 +1,11 @@
 import asyncio
 from jupyterhub.objects import Hub, Server
-from KubespawnerKeycloak import KeycloakRequester, KubespawnerKeycloak, InvalidKeycloakResponseCodeException, NoAssignedValidWorkspaces
+from keycloak import KeycloakRequester, KubespawnerKeycloak, InvalidKeycloakResponseCodeException, NoAssignedValidWorkspaces
 from kubespawner import KubeSpawner
 import pytest
 import requests
 from unittest.mock import Mock
+
 
 class TestKeycloakRequester:
     base_url : str = "http://test.com"

@@ -5,10 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "kubespawner_keycloak"
 dynamic = ["version"]
-authors = [
-  { name="Shaun Turner", email="shaun.turner1@nhs.net" },
-]
-description = "Keycloak integration into kubespawner" 
+authors = [{ name = "Shaun Turner", email = "shaun.turner1@nhs.net" }]
+description = "Keycloak integration into kubespawner"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -17,9 +15,9 @@ dependencies = [
   'importlib-metadata; python_version<"3.10"',
 ]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
 [project.urls]
@@ -35,8 +33,9 @@ path = "src/kubespawner_keycloak/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/kubespawner_keycloak"]
 
+[dependency-groups]
+dev = ["ruff>=0.11.2"]
+
 
 [tool.hatch.build]
-exclude = [
-  "test.py",
-]
+exclude = ["test.py"]

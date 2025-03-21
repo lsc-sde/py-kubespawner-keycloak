@@ -8,26 +8,42 @@ from unittest.mock import Mock
 
 
 class TestKeycloakRequester:
+    """
+    Test suite for KeycloakRequester class.
+    
+    This class tests the functionality of the KeycloakRequester which handles
+    authentication and API requests to a Keycloak server.
+    """
     base_url : str = "http://test.com"
     token_url : str = "http://test.com/token"
 
     def mock_get_token(self, requests_mock, status_code : int = 200):
+        """
+        Mock the token endpoint response.
+        
+        Args:
+            requests_mock: The pytest-requests-mock fixture
+            status_code: HTTP status code to return (default: 200)
+        """
         data = {"access_token":"2YotnFZFEjr1zCsicMWpAA", "token_type":"bearer","expires_in":60}
         requests_mock.post(self.token_url, json = data, status_code = status_code)
 
     def test_get_token_success(self, requests_mock):
+        """Test successful token retrieval from Keycloak."""
         requester = KeycloakRequester(self.base_url, self.token_url, "user", "password", "")
         self.mock_get_token(requests_mock)
         requester.get_access_token()
         assert "2YotnFZFEjr1zCsicMWpAA" == requester.access_token
         
     def test_get_token_failure(self, requests_mock):
+        """Test failure in token retrieval from Keycloak."""
         requester = KeycloakRequester(self.base_url, self.token_url, "user", "password", "")
         self.mock_get_token(requests_mock, status_code=403)
         with pytest.raises(InvalidKeycloakResponseCodeException):
             requester.get_access_token()
 
     def test_not_found(self, requests_mock):
+        """Test handling of 404 response from Keycloak API."""
         url : str = f"{self.base_url}/groups?populateHierarchy=true"
         requests_mock.get(url, text='<testing></testing>', status_code = 404)
         requester = KeycloakRequester(self.base_url, self.token_url, "user", "password", "")
@@ -36,6 +52,7 @@ class TestKeycloakRequester:
             requester.query("/groups?populateHierarchy=true")
     
     def test_server_error(self, requests_mock):
+        """Test handling of 500 server error from Keycloak API."""
         url : str = f"{self.base_url}/groups?populateHierarchy=true"
         requests_mock.get(url, text='<testing></testing>', status_code = 500)
         requester = KeycloakRequester(self.base_url, self.token_url, "user", "password", "")
@@ -44,6 +61,7 @@ class TestKeycloakRequester:
             requester.query("/groups?populateHierarchy=true")
 
     def test_invalid_response(self, requests_mock):
+        """Test handling of invalid JSON in response from Keycloak API."""
         url : str = f"{self.base_url}/groups?populateHierarchy=true"
         requests_mock.get(url, text='<testing></testing>', status_code = 200)
         requester = KeycloakRequester(self.base_url, self.token_url, "user", "password", "")
@@ -52,6 +70,7 @@ class TestKeycloakRequester:
             requester.query("/groups?populateHierarchy=true")
 
     def test_get_groups(self, requests_mock):
+        """Test successful retrieval of groups from Keycloak API."""
         url : str = f"{self.base_url}/groups?populateHierarchy=true"
         data = '[{"id": "429c803a-a033-4e1e-8aea-73b92fd43003","name": "jupyter-workspaces","path": "/jupyter-workspaces","subGroupCount": 2, "access": { "view": true, "viewMembers": true, "manageMembers": false, "manage": false, "manageMembership": false } }, { "id": "0239d876-a497-476d-96c8-96bde8d9f718", "name": "some-other-group", "path": "/some-other-group","subGroupCount": 0,"access": {"view": true, "viewMembers": true, "manageMembers": false,"manage": false,"manageMembership": false }}]'
         requests_mock.get(url, text=data, status_code = 200)
@@ -61,6 +80,7 @@ class TestKeycloakRequester:
         assert len(result) == 2
         
     def test_get_children(self, requests_mock):
+        """Test successful retrieval of child groups from Keycloak API."""
         url : str = f"{self.base_url}/groups/429c803a-a033-4e1e-8aea-73b92fd43003/children"
         data = '[{"id": "79cdf13c-a6bc-46cd-8a5d-1281b0fe8e53","name": "Colorectal Cancer Research Group Workspace","path": "/jupyter-workspaces/Colorectal Cancer Research Group Workspace","parentId": "429c803a-a033-4e1e-8aea-73b92fd43003","subGroupCount": 0,"attributes": {"workspace.xlscsde.nhs.uk/environment": ["jupyter_advanced"],"workspace.xlscsde.nhs.uk/startDate": ["2022-01-01"],"workspace.xlscsde.nhs.uk/endDate": ["2030-01-01"],"workspace.xlscsde.nhs.uk/description": ["An example workspace for the testing of using keycloak groups"]},"access": {"view": true,"viewMembers": true,"manageMembers": false,"manage": false,"manageMembership": false}},{"id": "a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab","name": "Default Generic Workspace","path": "/jupyter-workspaces/Default Generic Workspace","parentId": "429c803a-a033-4e1e-8aea-73b92fd43003","subGroupCount": 0,"attributes": {"workspace.xlscsde.nhs.uk/startDate": ["2022-01-01"],"workspace.xlscsde.nhs.uk/environment": ["jupyter_default"],"workspace.xlscsde.nhs.uk/endDate": ["2030-01-01"],"workspace.xlscsde.nhs.uk/description": ["Basic environment for testing with Python R and Julia."]},"access": {"view": true,"viewMembers": true,"manageMembers": false,"manage": false,"manageMembership": false}}]'
         requests_mock.get(url, text=data, status_code = 200)
@@ -69,12 +89,20 @@ class TestKeycloakRequester:
         result = requester.query("/groups/429c803a-a033-4e1e-8aea-73b92fd43003/children")
         assert len(result) == 2
 
+
 class TestKubespawnerKeycloak:
+    """
+    Test suite for KubespawnerKeycloak class.
+    
+    This class tests the integration between Kubespawner and Keycloak,
+    verifying workspace permissions and configuration handling.
+    """
     base_url : str = "http://test.com"
     token_url : str = "http://test.com/token"
 
     @pytest.mark.asyncio
     async def test_get_groups(self, requests_mock):
+        """Test retrieval of all groups for a user."""
         self.mock_authentication(requests_mock)
         self.mock_get_groups(requests_mock)
         spawner = await self.create_spawner([])
@@ -84,6 +112,7 @@ class TestKubespawnerKeycloak:
         
     @pytest.mark.asyncio
     async def test_get_group(self, requests_mock):
+        """Test retrieval of a specific group by ID."""
         self.mock_authentication(requests_mock)
         self.mock_get_group(requests_mock)
         spawner = await self.create_spawner([])
@@ -93,6 +122,7 @@ class TestKubespawnerKeycloak:
 
     @pytest.mark.asyncio
     async def test_get_child_group(self, requests_mock):
+        """Test retrieval of child groups for a parent group ID."""
         self.mock_authentication(requests_mock)
         self.mock_get_child_groups(requests_mock)
         spawner = await self.create_spawner([])
@@ -105,6 +135,7 @@ class TestKubespawnerKeycloak:
 
     @pytest.mark.asyncio
     async def test_get_workspaces(self, requests_mock):
+        """Test retrieval of permitted workspaces for a user."""
         self.mock_authentication(requests_mock)
         self.mock_get_groups(requests_mock)
         self.mock_get_child_groups(requests_mock)
@@ -126,6 +157,7 @@ class TestKubespawnerKeycloak:
 
     @pytest.mark.asyncio
     async def test_get_no_workspaces(self, requests_mock):
+        """Test behavior when a user has no permitted workspaces."""
         self.mock_authentication(requests_mock)
         self.mock_get_groups(requests_mock)
         self.mock_get_child_groups(requests_mock)
@@ -138,6 +170,12 @@ class TestKubespawnerKeycloak:
             print(f"permitted_workspaces = {permitted_workspaces}")
         
     def get_environments_config(self):
+        """
+        Create a sample environments configuration for testing.
+        
+        Returns:
+            dict: A dictionary with environment configurations
+        """
         environments_config = {}
         environments_config["jupyter_advanced"] = {}
         environments_config["jupyter_advanced"]["image"] = "jupyter/datascience-notebook:latest"
@@ -146,45 +184,101 @@ class TestKubespawnerKeycloak:
         return environments_config
 
     async def create_spawner(self, groups):
+        """
+        Create a KubeSpawner instance with mock user for testing.
+        
+        Args:
+            groups: List of group paths the user belongs to
+            
+        Returns:
+            KubeSpawner: A configured spawner instance for testing
+        """
         spawner = KubeSpawner(user = MockUser(), hub = Hub())
         spawner.oauth_user = {}
         spawner.oauth_user["realm_groups"] = groups
         return spawner
 
     def mock_authentication(self, requests_mock):
+        """
+        Mock the Keycloak authentication endpoint.
+        
+        Args:
+            requests_mock: The pytest-requests-mock fixture
+        """
         url : str = self.token_url
         data = {"access_token":"2YotnFZFEjr1zCsicMWpAA", "token_type":"bearer","expires_in":60}
         requests_mock.post(url, json=data, status_code = 200)
 
     def mock_get_child_groups(self, requests_mock):
+        """
+        Mock the Keycloak endpoint for retrieving child groups.
+        
+        Args:
+            requests_mock: The pytest-requests-mock fixture
+        """
         url : str = f"{self.base_url}/groups/429c803a-a033-4e1e-8aea-73b92fd43003/children"
         data = '[{"id": "79cdf13c-a6bc-46cd-8a5d-1281b0fe8e53","name": "Colorectal Cancer Research Group Workspace","path": "/jupyter-workspaces/Colorectal Cancer Research Group Workspace","parentId": "429c803a-a033-4e1e-8aea-73b92fd43003","subGroupCount": 0,"attributes": {"workspace.xlscsde.nhs.uk/environment": ["jupyter_advanced"],"workspace.xlscsde.nhs.uk/startDate": ["2022-01-01"],"workspace.xlscsde.nhs.uk/endDate": ["2030-01-01"],"workspace.xlscsde.nhs.uk/description": ["An example workspace for the testing of using keycloak groups"]},"access": {"view": true,"viewMembers": true,"manageMembers": false,"manage": false,"manageMembership": false}},{"id": "a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab","name": "Default Generic Workspace","path": "/jupyter-workspaces/Default Generic Workspace","parentId": "429c803a-a033-4e1e-8aea-73b92fd43003","subGroupCount": 0,"attributes": {"workspace.xlscsde.nhs.uk/startDate": ["2022-01-01"],"workspace.xlscsde.nhs.uk/environment": ["jupyter_default"],"workspace.xlscsde.nhs.uk/endDate": ["2030-01-01"],"workspace.xlscsde.nhs.uk/description": ["Basic environment for testing with Python R and Julia."]},"access": {"view": true,"viewMembers": true,"manageMembers": false,"manage": false,"manageMembership": false}}]'
         requests_mock.get(url, text=data, status_code = 200)
 
     def mock_get_groups(self, requests_mock):
+        """
+        Mock the Keycloak endpoint for retrieving all groups.
+        
+        Args:
+            requests_mock: The pytest-requests-mock fixture
+        """
         url : str = f"{self.base_url}/groups?populateHierarchy=true"
         data = '[{"id": "429c803a-a033-4e1e-8aea-73b92fd43003","name": "jupyter-workspaces","path": "/jupyter-workspaces","subGroupCount": 2, "access": { "view": true, "viewMembers": true, "manageMembers": false, "manage": false, "manageMembership": false } }, { "id": "0239d876-a497-476d-96c8-96bde8d9f718", "name": "some-other-group", "path": "/some-other-group","subGroupCount": 0,"access": {"view": true, "viewMembers": true, "manageMembers": false,"manage": false,"manageMembership": false }}]'
         requests_mock.get(url, text=data, status_code = 200)
 
     def mock_get_group(self, requests_mock):
+        """
+        Mock the Keycloak endpoint for retrieving a specific group.
+        
+        Args:
+            requests_mock: The pytest-requests-mock fixture
+        """
         url : str = f"{self.base_url}/groups/a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab"
         data = '{ "id": "a6fdb60b-f11d-4c59-bdf3-e03fac24b6ab", "name": "Default Generic Workspace", "path": "/jupyter-workspaces/Default Generic Workspace", "parentId": "429c803a-a033-4e1e-8aea-73b92fd43003", "subGroupCount": 0, "attributes": { "workspace.xlscsde.nhs.uk/startDate": [ "2022-01-01" ], "workspace.xlscsde.nhs.uk/environment": [ "jupyter_default" ], "workspace.xlscsde.nhs.uk/endDate": [ "2030-01-01" ], "workspace.xlscsde.nhs.uk/description": [ "Basic environment for testing with Python R and Julia." ] }, "access": { "view": true, "viewMembers": true, "manageMembers": false, "manage": false, "manageMembership": false } }'
         requests_mock.get(url, text=data, status_code = 200)
     
     
 class MockUser(Mock):
+    """
+    Mock user class for testing JupyterHub spawner code.
+    
+    This class simulates a JupyterHub user object for testing purposes.
+    """
     name = 'fake'
     server = Server()
 
     def __init__(self, **kwargs):
+        """
+        Initialize a mock user with custom attributes.
+        
+        Args:
+            **kwargs: Arbitrary attributes to set on the mock user
+        """
         super().__init__()
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     @property
     def escaped_name(self):
+        """
+        Get the URL-safe username.
+        
+        Returns:
+            str: The user's name
+        """
         return self.name
 
     @property
     def url(self):
+        """
+        Get the user's server URL.
+        
+        Returns:
+            str: URL of the user's server
+        """
         return self.server.url
